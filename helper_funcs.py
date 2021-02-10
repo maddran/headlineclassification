@@ -7,7 +7,18 @@ Original file is located at
     https://colab.research.google.com/drive/1VXt2DfQ7zrNwK08iq_kWPyDq4yUCj-Ce
 """
 
-!pip install -Uq transformers
+def install_and_import(package):
+    import importlib
+    try:
+        importlib.import_module(package)
+    except ImportError:
+        import pip
+        pip.main(['install', package])
+    finally:
+        globals()[package] = importlib.import_module(package)
+
+
+install_and_import('transformers')
 
 from transformers import BertTokenizer
 # Load the BERT tokenizer.
