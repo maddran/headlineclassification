@@ -12,7 +12,11 @@ import torch
 from torch.utils.data import DataLoader
 from transformers import XLMRobertaForSequenceClassification, AdamW
 
+print("Downloading XLM-Roberta Tokenizer...")
 tokenizer = XLMRobertaTokenizer.from_pretrained('xlm-roberta-base')
+
+device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+print(f"Setting device to {device}")
 
 def encode_text(text, tokenizer):
   return tokenizer(text, 
@@ -52,8 +56,6 @@ def format_time(elapsed):
     return str(datetime.timedelta(seconds=elapsed_rounded))
     
 
-
-device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
 def predict(data_loader, model):
   predictions = []
