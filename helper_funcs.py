@@ -8,13 +8,7 @@ Original file is located at
 """
 
 import subprocess
-import sys   
-
-from transformers import XLMRobertaTokenizer
-
-import torch 
-from torch.utils.data import DataLoader
-from transformers import XLMRobertaForSequenceClassification, AdamW
+import sys
 
 def install_and_import(package):
     import importlib
@@ -29,6 +23,13 @@ def install_and_import(package):
 install_and_import('Sentencepiece')
 install_and_import('transformers')
 
+   
+
+from transformers import XLMRobertaTokenizer
+
+import torch 
+from torch.utils.data import DataLoader
+from transformers import XLMRobertaForSequenceClassification, AdamW
 
 tokenizer = XLMRobertaTokenizer.from_pretrained('xlm-roberta-base')
 
