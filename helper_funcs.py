@@ -8,7 +8,13 @@ Original file is located at
 """
 
 import subprocess
-import sys    
+import sys   
+
+from transformers import XLMRobertaTokenizer
+
+import torch 
+from torch.utils.data import DataLoader
+from transformers import XLMRobertaForSequenceClassification, AdamW
 
 def install_and_import(package):
     import importlib
@@ -20,66 +26,33 @@ def install_and_import(package):
         globals()[package] = importlib.import_module(package)
 
 
+install_and_import('Sentencepiece')
 install_and_import('transformers')
 
-from transformers import BertTokenizer
-# Load the BERT tokenizer.
-print('Loading BERT tokenizer...')
-tokenizer = BertTokenizer.from_pretrained('bert-base-multilingual-cased', do_lower_case=True)
 
-def encode_headlines(data):
-  # Tokenize all of the sentences and map the tokens to thier word IDs.
-  input_ids = []
-  # For every sentence...
-  for sent in data.headline:
-      # `encode` will:
-      #   (1) Tokenize the sentence.
-      #   (2) Prepend the `[CLS]` token to the start.
-      #   (3) Append the `[SEP]` token to the end.
-      #   (4) Map tokens to their IDs.
-      encoded_sent = tokenizer.encode(
-                          sent,                      # Sentence to encode.
-                          add_special_tokens = True, # Add '[CLS]' and '[SEP]'
-                          # This function also supports truncation and conversion
-                          # to pytorch tensors, but we need to do padding, so we
-                          # can't use these features :( .
-                          truncation = True,
-                          max_length = 128,          # Truncate all sentences.
-                          #return_tensors = 'pt',     # Return pytorch tensors.
-                    )
-      
-      # Add the encoded sentence to the list.
-      input_ids.append(encoded_sent)
+tokenizer = XLMRobertaTokenizer.from_pretrained('xlm-roberta-base')
 
-  return input_ids
+def encode_text(text, tokenizer):
+  return tokenizer(text, 
+            max_length=128,
+            add_special_tokens = True,
+            truncation=True, 
+            padding='max_length')
+            
+class Dataset(torch.utils.data.Dataset):
+    def __init__(self, encodings, labels):
+        self.encodings = encodings
+        self.labels = labels
 
+    def __getitem__(self, idx):
+        item = {key: torch.tensor(val[idx]) for key, val in self.encodings.items()}
+        item['labels'] = torch.tensor(self.labels[idx])
+        return item
 
-def pad_sentences(input_ids):
-  from keras.preprocessing.sequence import pad_sequences
-
-  MAX_LEN = 128
-  print('\nPadding/truncating all sentences to %d values...' % MAX_LEN)
-  print('\nPadding token: "{:}", ID: {:}'.format(tokenizer.pad_token, tokenizer.pad_token_id))
-
-  input_ids = pad_sequences(input_ids, maxlen=MAX_LEN, dtype="long", 
-                            value=0, truncating="post", padding="post")
-  print('\Done.')
-
-  return input_ids
-
-
-
-def get_attention(input_ids):
-  # Create attention masks
-  #     - If a token ID is 0, then it's padding, set the mask to 0.
-  #     - If a token ID is > 0, then it's a real token, set the mask to 1.
-  attention_masks = [[int(token_id > 0) for token_id in sent] for sent in input_ids]
-  return attention_masks
-
-
-import numpy as np
-# Function to calculate the accuracy of our predictions vs labels
-def flat_accuracy(preds, labels):
+    def __len__(self):
+        return len(self.labels)
+            
+def accuracy(preds, labels):
     pred_flat = np.argmax(preds, axis=1).flatten()
     labels_flat = labels.flatten()
     return np.sum(pred_flat == labels_flat) / len(labels_flat)
@@ -95,5 +68,30 @@ def format_time(elapsed):
     
     # Format as hh:mm:ss
     return str(datetime.timedelta(seconds=elapsed_rounded))
+    
 
 
+device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+
+def predict(data_loader, model):
+  predictions = []
+  true_labels = []
+
+  for batch in data_loader:
+    input_ids = batch['input_ids'].to(device)
+    attention_mask = batch['attention_mask'].to(device)
+    labels = batch['labels'].to(device)
+
+    with torch.no_grad(): 
+      outputs = outputs = model(input_ids, 
+                                attention_mask=attention_mask, 
+                                token_type_ids=None) 
+
+    logits = outputs[0]                   
+    logits = logits.detach().cpu().numpy()
+    label_ids = labels.to('cpu').numpy()
+
+    predictions.append(logits)
+    true_labels.append(label_ids)
+
+  return predictions, true_labels
