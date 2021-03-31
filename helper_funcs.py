@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 import numpy as np
+import time
+import datetime
 
 from sklearn.preprocessing import LabelEncoder
 from transformers import XLMRobertaTokenizer
@@ -39,8 +41,7 @@ def accuracy(preds, labels):
     labels_flat = labels.flatten()
     return np.sum(pred_flat == labels_flat) / len(labels_flat)
 
-import time
-import datetime
+
 def format_time(elapsed):
     '''
     Takes a time in seconds and returns a string hh:mm:ss
@@ -77,6 +78,7 @@ def predict(data_loader, model):
 
 
 def get_le():
+  import numpy as np
   le = LabelEncoder()
   le.classes_ = np.load('classes.npy')
   return le
