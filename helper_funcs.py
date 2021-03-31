@@ -73,7 +73,7 @@ def predict(data_loader, model):
     predictions.append(logits)
     true_labels.append(label_ids)
 
-  return predictions, 
+  return predictions, true_labels
 
 
 def get_le():
