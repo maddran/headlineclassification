@@ -60,7 +60,8 @@ def predict(data_loader, model, label_flag = True):
     for batch in data_loader:
         input_ids = batch['input_ids'].to(device)
         attention_mask = batch['attention_mask'].to(device)
-        labels = batch['labels'].to(device)
+        if label_flag:
+            labels = batch['labels'].to(device)
 
         with torch.no_grad(): 
             outputs = model(input_ids, 
@@ -74,6 +75,7 @@ def predict(data_loader, model, label_flag = True):
         if label_flag:
             label_ids = labels.to('cpu').numpy()
             true_labels.append(label_ids)
+
     if label_flag:
         return predictions,true_labels
     else:
@@ -81,7 +83,6 @@ def predict(data_loader, model, label_flag = True):
 
 
 def get_le():
-    import numpy as np
     le = LabelEncoder()
     le.classes_ = np.load('classes.npy')
     return le
